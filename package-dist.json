@@ -1,0 +1,17 @@
+{
+  "name": "venwolf",
+  "version": "1.5.0",
+  "description": "VenWolf - DG-Lab 郊狼游戏惩罚中心",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "keywords": [
+    "VenWolf",
+    "DG-Lab",
+    "obs"
+  ],
+  "author": "Venlac",
+  "license": "MIT"
+}
