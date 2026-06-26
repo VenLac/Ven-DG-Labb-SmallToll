@@ -1,19 +1,19 @@
 // ===== 微软 Fluent 云母 / 亚克力（Mica & Acrylic）全局基底 =====
 
 :root {
-    // 大圆角：覆盖 PrimeVue 内容与表单圆角 token
-    --p-content-border-radius: 1rem;
-    --p-form-field-border-radius: 0.875rem;
-    --p-border-radius-sm: 0.625rem;
-    --p-border-radius: 0.875rem;
-    --p-border-radius-md: 0.875rem;
-    --p-border-radius-lg: 1rem;
-    --p-border-radius-xl: 1.25rem;
+    // 大圆角：覆盖 PrimeVue 内容与表单圆角 token，整体增大更圆润
+    --p-content-border-radius: 1.5rem;
+    --p-form-field-border-radius: 1.25rem;
+    --p-border-radius-sm: 1rem;
+    --p-border-radius: 1.25rem;
+    --p-border-radius-md: 1.25rem;
+    --p-border-radius-lg: 1.5rem;
+    --p-border-radius-xl: 1.75rem;
 
     // 亚克力材质参数（Acrylic：磨砂、低饱和、不透明度较高）
     --glass-blur: 30px;
     --glass-saturate: 125%;
-    --glass-radius: 1.25rem;
+    --glass-radius: 1.75rem;
     --glass-bg: rgba(252, 252, 252, 0.5);
     --glass-border: rgba(255, 255, 255, 0.55);
     --glass-shadow:
@@ -55,26 +55,8 @@
     }
 }
 
-// 根元素背景：浏览器会将 html 的背景绘制到整个 canvas（含滚动条区域），
-// 因此滚动条透明时背景图能延伸到滚动条下方
 html {
-    background-color: #16161c;
-    background-image:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(20, 20, 28, 0.12)),
-        url('/background.png');
-    background-size: cover, cover;
-    background-position: center, center;
-    background-repeat: no-repeat, no-repeat;
-    background-attachment: fixed;
-}
-
-@media (prefers-color-scheme: dark) {
-    html {
-        background-color: #0c0c10;
-        background-image:
-            linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.32)),
-            url('/background.png');
-    }
+    background-color: #ffffff;
 }
 
 body {
@@ -93,6 +75,7 @@ body {
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
     border-radius: var(--glass-radius);
+    transition: box-shadow 420ms var(--ease-smooth), border-color 220ms var(--ease-smooth);
 }
 
 // 亚克力细微噪点纹理（Fluent Acrylic 的颗粒质感）
@@ -302,6 +285,37 @@ a {
 .fade-slide-leave-to {
     opacity: 0;
     transform: translateX(-12px);
+}
+
+// ===== 悬浮展开按钮（复用 nav-capsule 动画模式）=====
+// 默认只显示图标，悬浮时展开显示标签文字
+// contain 隔离 layout，避免触发全局重排
+.btn-compact {
+    contain: layout style paint;
+    max-width: 2.75rem;
+    min-width: 2.75rem;
+    overflow: hidden;
+    transition: max-width 420ms var(--ease-smooth);
+    white-space: nowrap;
+
+    .p-button-label {
+        max-width: 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateX(-0.4rem);
+        transition: opacity 240ms var(--ease-smooth), transform 340ms var(--ease-smooth), max-width 340ms var(--ease-smooth);
+    }
+
+    &:hover {
+        max-width: 20rem;
+
+        .p-button-label {
+            max-width: 15rem;
+            opacity: 1;
+            transform: translateX(0);
+            transition-delay: 90ms;
+        }
+    }
 }
 
 // 无障碍：用户偏好减少动效时关闭所有自定义动画

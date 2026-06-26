@@ -46,16 +46,41 @@ export function parseCoyotePulseHex(pulseHex: string[]): CoyoteRawPulseData {
     return { frequency: freqData, strength: strengthData };
 }
 
-export function generatePulseSVG(pulseData: CoyoteRawPulseData): string {
+export const PULSE_MIN_WIDTH = 480;
+
+export function generatePulseSVG(pulseData: CoyoteRawPulseData, minWidth?: number): string {
     const linesPerPulse = 5;
     const pulseSegmentWidth = 10;
     const pulseSegmentHeight = 260;
 
+    const naturalWidth = pulseData.frequency.length * pulseSegmentWidth;
+
+    const targetWidth = minWidth ?? naturalWidth;
+    const maxPoints = Math.floor(targetWidth / pulseSegmentWidth);
+
+    let freqData: number[];
+    let strengthData: number[];
+
+    if (naturalWidth >= targetWidth) {
+        freqData = pulseData.frequency.slice(0, maxPoints);
+        strengthData = pulseData.strength.slice(0, maxPoints);
+    } else {
+        const repeatTimes = Math.ceil(maxPoints / pulseData.frequency.length);
+        freqData = [];
+        strengthData = [];
+        for (let r = 0; r < repeatTimes; r++) {
+            freqData = freqData.concat(pulseData.frequency);
+            strengthData = strengthData.concat(pulseData.strength);
+        }
+        freqData = freqData.slice(0, maxPoints);
+        strengthData = strengthData.slice(0, maxPoints);
+    }
+
     let svgData: string[] = [];
     
-    for (let i = 0; i < pulseData.frequency.length; i ++) {
-        let freq = pulseData.frequency[i];
-        let strength = pulseData.strength[i];
+    for (let i = 0; i < freqData.length; i ++) {
+        let freq = freqData[i];
+        let strength = strengthData[i];
 
         let height = strength / 100 * pulseSegmentHeight;
 
@@ -93,7 +118,7 @@ export function generatePulseSVG(pulseData: CoyoteRawPulseData): string {
         }
     }
 
-    const svgWidth = pulseData.frequency.length * pulseSegmentWidth;
+    const svgWidth = freqData.length * pulseSegmentWidth;
     const svgHeight = pulseSegmentHeight;
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}" shape-rendering="crispEdges">${svgData.join('')}</svg>`;

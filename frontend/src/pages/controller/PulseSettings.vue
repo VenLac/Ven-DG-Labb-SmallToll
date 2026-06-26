@@ -145,11 +145,13 @@ const handleDeletePulse = async (pulseId: string) => {
     <div class="flex flex-col justify-between gap-2 mb-2 items-start md:flex-row md:items-center">
       <h2 class="font-bold text-xl">波形列表</h2>
       <div class="flex gap-2 items-center">
-        <Button icon="pi pi-sort-alpha-down" title="波形排序" severity="secondary" @click="state.showSortPulseDialog = true"
+        <Button icon="pi pi-sort-alpha-down" title="波形排序" severity="secondary" class="btn-compact"
+          @click="state.showSortPulseDialog = true"
           v-if="parentState.pulseMode === 'sequence'"></Button>
-        <Button icon="pi pi-plus" title="导入波形" severity="secondary"
+        <Button icon="pi pi-plus" title="导入波形" severity="secondary" class="btn-compact"
           @click="state.showImportPulseDialog = true"></Button>
-        <Button icon="pi pi-clock" title="波形切换间隔" severity="secondary" :label="parentState.pulseChangeInterval + 's'"
+        <Button icon="pi pi-clock" title="波形切换间隔" severity="secondary" class="btn-compact"
+          :label="parentState.pulseChangeInterval + 's'"
           @click="showPulseTimePopover"></Button>
         <SelectButton v-model="parentState.pulseMode" :options="pulseModeOptions" optionLabel="label" optionValue="value"
           :allowEmpty="false" aria-labelledby="basic" />

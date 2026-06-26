@@ -2,7 +2,7 @@
 import FireIcon from '../../assets/fire-white.svg';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
-import { generatePulseSVG, parseCoyotePulseHex } from '../../utils/coyotePulse';
+import { generatePulseSVG, parseCoyotePulseHex, PULSE_MIN_WIDTH } from '../../utils/coyotePulse';
 
 defineOptions({
     name: 'PulseCard',
@@ -50,35 +50,50 @@ const deletePulse = () => {
     emit('deletePulse', pulseId);
 };
 
-let prevSvgDataUrl: string | null = null;
-let prevDarkSvgDataUrl: string | null = null;
+const CARD_MIN_HEIGHT_PX = 128;
+const WAVEFORM_HEIGHT_RATIO = 0.6;
+const SVG_NATURAL_HEIGHT = 260;
+const SCALE_FACTOR = (CARD_MIN_HEIGHT_PX * WAVEFORM_HEIGHT_RATIO) / SVG_NATURAL_HEIGHT;
+
+let prevUrls: string[] = [];
+
+function makeSvgUrl(svg: string, color: string): string {
+    const colored = svg.replace(/currentColor/g, color);
+    const blob = new Blob([colored], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    prevUrls.push(url);
+    return url;
+}
 
 const cardStyles = computed(() => {
-    if (prevSvgDataUrl) {
-        URL.revokeObjectURL(prevSvgDataUrl);
-    }
-    if (prevDarkSvgDataUrl) {
-        URL.revokeObjectURL(prevDarkSvgDataUrl);
-    }
+    prevUrls.forEach(u => URL.revokeObjectURL(u));
+    prevUrls = [];
 
     if (props.pulseInfo?.pulseData) {
-        let pulseData = parseCoyotePulseHex(props.pulseInfo.pulseData);
-        let svg = generatePulseSVG(pulseData);
+        const pulseData = parseCoyotePulseHex(props.pulseInfo.pulseData);
+        const naturalWidth = pulseData.frequency.length * 10;
 
-        let lightSvg = svg.replace(/currentColor/g, pulseColorLightMode);
-        let darkSvg = svg.replace(/currentColor/g, pulseColorDarkMode);
+        const staticSvg = generatePulseSVG(pulseData, PULSE_MIN_WIDTH);
+        const fullSvg = naturalWidth <= PULSE_MIN_WIDTH
+            ? generatePulseSVG(pulseData, PULSE_MIN_WIDTH)
+            : generatePulseSVG(pulseData);
 
-        let lightSvgBlob = new Blob([lightSvg], { type: 'image/svg+xml' });
-        let lightSvgDataUrl = URL.createObjectURL(lightSvgBlob);
-        prevSvgDataUrl = lightSvgDataUrl;
+        const staticLightUrl = makeSvgUrl(staticSvg, pulseColorLightMode);
+        const staticDarkUrl = makeSvgUrl(staticSvg, pulseColorDarkMode);
+        const fullLightUrl = makeSvgUrl(fullSvg, pulseColorLightMode);
+        const fullDarkUrl = makeSvgUrl(fullSvg, pulseColorDarkMode);
 
-        let darkSvgBlob = new Blob([darkSvg], { type: 'image/svg+xml' });
-        let darkSvgDataUrl = URL.createObjectURL(darkSvgBlob);
-        prevDarkSvgDataUrl = darkSvgDataUrl;
+        const fullSvgWidth = Math.max(naturalWidth, PULSE_MIN_WIDTH);
+        const scrollDistance = Math.round(fullSvgWidth * SCALE_FACTOR);
+        const scrollDuration = Math.max(8, fullSvgWidth / 40);
 
         return {
-            '--light-pulse-background': `url(${lightSvgDataUrl})`,
-            '--dark-pulse-background': `url(${darkSvgDataUrl})`,
+            '--light-pulse-background': `url(${staticLightUrl})`,
+            '--dark-pulse-background': `url(${staticDarkUrl})`,
+            '--full-light-pulse-background': `url(${fullLightUrl})`,
+            '--full-dark-pulse-background': `url(${fullDarkUrl})`,
+            '--pulse-scroll-distance': `${scrollDistance}px`,
+            '--pulse-scroll-duration': `${scrollDuration}s`,
         };
     } else {
         return {};
@@ -96,7 +111,7 @@ const moreOptions = computed<any[]>(() => {
         },
     ];
 
-    if (props.pulseInfo.isCustom) { // 自定义波形
+    if (props.pulseInfo.isCustom) {
         options.push({
             label: '重命名',
             icon: 'pi pi-pencil',
@@ -118,19 +133,15 @@ const moreOptions = computed<any[]>(() => {
 });
 
 onBeforeUnmount(() => {
-    if (prevSvgDataUrl) {
-        URL.revokeObjectURL(prevSvgDataUrl);
-    }
-    if (prevDarkSvgDataUrl) {
-        URL.revokeObjectURL(prevDarkSvgDataUrl);
-    }
+    prevUrls.forEach(u => URL.revokeObjectURL(u));
+    prevUrls = [];
 });
 </script>
 
 <template>
     <Card class="pulse-card" :style="cardStyles">
         <template #content>
-            <div class="flex flex-col w-full h-full">
+            <div class="flex flex-col w-full h-full relative" style="z-index: 1;">
                 <div class="flex w-full justify-between items-center">
                     <div class="flex h-full gap-1 items-center flex-grow checkable" @click="setCurrentPulse()">
                         <div class="pulse-name font-semibold px-2">
@@ -156,12 +167,19 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
+@keyframes pulse-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-1 * var(--pulse-scroll-distance, 142px))); }
+}
+
 .pulse-card {
+    position: relative;
     background-size: auto 60%;
     background-repeat: repeat-x;
     background-position: 10px bottom;
 
     min-height: 8rem;
+    overflow: hidden;
 
     --p-card-body-padding: 0.5rem;
     --p-card-background: transparent;
@@ -173,8 +191,30 @@ onBeforeUnmount(() => {
     
     transition: background-color 50ms linear;
 
+    &::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 10px;
+        right: 0;
+        height: 60%;
+        background-image: var(--full-light-pulse-background);
+        background-size: auto 100%;
+        background-repeat: repeat-x;
+        background-position: 0 100%;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 0;
+        transition: opacity 150ms;
+    }
+
     &:hover {
         background-color: var(--p-button-secondary-hover-background);
+
+        &::before {
+            opacity: 1;
+            animation: pulse-scroll var(--pulse-scroll-duration, 8s) linear infinite;
+        }
     }
 
     &:active {
@@ -193,10 +233,13 @@ onBeforeUnmount(() => {
 @media (prefers-color-scheme: dark) {
     .pulse-card {
         background-image: var(--dark-pulse-background);
+
+        &::before {
+            background-image: var(--full-dark-pulse-background);
+        }
     }
 }
 
-// Fade Transition
 .fade-enter-active, .fade-leave-active {
     transition: opacity 100ms linear;
 }

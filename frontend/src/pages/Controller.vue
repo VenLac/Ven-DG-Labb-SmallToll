@@ -105,6 +105,58 @@ const controllerPageTabs = [
   { title: '游戏连接', id: 'game', icon: 'pi pi-map' },
 ] as const;
 
+// === 滑动悬浮指示器（顶栏）===
+const barIndX = ref(0)
+const barIndW = ref(0)
+const barIndVis = ref(false)
+
+const barIndStyle = computed(() => ({
+  left: `${barIndX.value}px`,
+  width: `${barIndW.value}px`,
+  opacity: barIndVis.value ? 1 : 0,
+}))
+
+function onBarEnter(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const p = el.parentElement!
+  const pr = p.getBoundingClientRect()
+  const er = el.getBoundingClientRect()
+  const b = parseFloat(getComputedStyle(p).borderLeftWidth) || 0
+  barIndX.value = er.left - pr.left - b
+  barIndW.value = er.width
+  barIndVis.value = true
+}
+
+function onBarLeave() {
+  barIndVis.value = false
+}
+
+// === 滑动悬浮指示器（侧边栏）===
+const navIndY = ref(0)
+const navIndH = ref(0)
+const navIndVis = ref(false)
+
+const navIndStyle = computed(() => ({
+  top: `${navIndY.value}px`,
+  height: `${navIndH.value}px`,
+  opacity: navIndVis.value ? 1 : 0,
+}))
+
+function onNavEnter(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const p = el.parentElement!
+  const pr = p.getBoundingClientRect()
+  const er = el.getBoundingClientRect()
+  const b = parseFloat(getComputedStyle(p).borderTopWidth) || 0
+  navIndY.value = er.top - pr.top - b
+  navIndH.value = er.height
+  navIndVis.value = true
+}
+
+function onNavLeave() {
+  navIndVis.value = false
+}
+
 watch(() => state.controllerPage, (newVal) => {
   router.push({ path: newVal });
 });
@@ -505,34 +557,31 @@ watch([gameConfig, strengthConfig], () => {
     <ConfirmDialog></ConfirmDialog>
     <CoyoteLocalConnectService :state="state" ref="coyoteLocalRef"></CoyoteLocalConnectService>
     <div class="top-bar enter-fade-up" style="--stagger-i: 0;">
-      <Button icon="pi pi-qrcode" severity="secondary" label="连接设备"
-        v-if="state.clientStatus !== 'connected'" @click="showConnectionDialog()" />
-      <Button v-else icon="pi pi-info-circle" severity="secondary" label="连接信息"
-        @click="state.showClientInfoDialog = true" />
-
-      <Transition name="status-swap" mode="out-in">
-        <span class="status-tag text-red-600" v-if="state.clientStatus === 'init'" key="init">
-          <i class="pi pi-circle-off"></i>
-          <span>未连接</span>
-        </span>
-        <span class="status-tag text-green-600" v-else-if="state.clientStatus === 'connected'" key="connected">
-          <i class="pi pi-circle-on"></i>
-          <span>已连接</span>
-        </span>
-        <span class="status-tag text-yellow-600" v-else key="waiting">
-          <i class="pi pi-spin pi-spinner"></i>
-          <span>等待连接</span>
-        </span>
-      </Transition>
-
-      <div class="flex-grow"></div>
-
-      <Button icon="pi pi-file-export" severity="secondary" label="添加到OBS"
-        @click="showLiveCompDialog()" />
-      <Button icon="pi pi-play" severity="secondary" label="启动输出" v-if="!state.gameStarted"
-        @click="handleStartGame()" />
-      <Button icon="pi pi-pause" severity="secondary" label="暂停输出" v-else
-        @click="handleStopGame()" />
+      <div class="bar-capsule glass bar-group" @mouseleave="onBarLeave">
+        <div class="bar-indicator" :style="barIndStyle"></div>
+        <button class="bar-item" v-if="state.clientStatus !== 'connected'"
+          @click="showConnectionDialog()" title="连接设备" @mouseenter="onBarEnter">
+          <i class="pi pi-qrcode bar-icon"></i>
+          <span class="bar-label">连接设备</span>
+        </button>
+        <button class="bar-item" v-else
+          @click="state.showClientInfoDialog = true" title="连接信息" @mouseenter="onBarEnter">
+          <i class="pi pi-info-circle bar-icon"></i>
+          <span class="bar-label">连接信息</span>
+        </button>
+        <button class="bar-item" @click="showLiveCompDialog()" title="添加到OBS" @mouseenter="onBarEnter">
+          <i class="pi pi-file-export bar-icon"></i>
+          <span class="bar-label">添加到OBS</span>
+        </button>
+        <button class="bar-item" v-if="!state.gameStarted" @click="handleStartGame()" title="启动输出" @mouseenter="onBarEnter">
+          <i class="pi pi-play bar-icon"></i>
+          <span class="bar-label">启动输出</span>
+        </button>
+        <button class="bar-item" v-else @click="handleStopGame()" title="暂停输出" @mouseenter="onBarEnter">
+          <i class="pi pi-pause bar-icon"></i>
+          <span class="bar-label">暂停输出</span>
+        </button>
+      </div>
     </div>
 
     <div class="flex flex-col lg:flex-row items-start gap-6 controller-body">
@@ -541,10 +590,12 @@ watch([gameConfig, strengthConfig], () => {
           <StatusChart v-model:val-low="chartVal.valLow" v-model:val-high="chartVal.valHigh"
             :val-limit="chartVal.valLimit" :running="state.gameStarted" readonly />
         </div>
-        <div class="nav-capsule glass">
+        <div class="nav-capsule glass" @mouseleave="onNavLeave">
+          <div class="nav-indicator" :style="navIndStyle"></div>
           <button v-for="tab in controllerPageTabs" :key="tab.id" type="button"
             class="nav-item" :class="{ active: state.controllerPage === tab.id }"
-            @click="state.controllerPage = tab.id">
+            @click="state.controllerPage = tab.id"
+            @mouseenter="onNavEnter">
             <i class="nav-icon" :class="tab.icon"></i>
             <span class="nav-label">{{ tab.title }}</span>
           </button>
@@ -610,20 +661,12 @@ $container-max-widths: (
   }
 }
 
-// 顶栏：透明并排
+// 顶栏：居中
 .top-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  justify-content: center;
   padding: 0.5rem 0.25rem;
-}
-
-.status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-weight: 600;
 }
 
 .controller-body {
@@ -683,7 +726,21 @@ $container-max-widths: (
   width: 10.5rem;
 }
 
+.nav-indicator {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: calc(100% - 1rem);
+  border-radius: 9999px;
+  background: rgba(127, 127, 127, 0.18);
+  pointer-events: none;
+  transition: top 200ms var(--ease-smooth), height 200ms var(--ease-smooth), opacity 180ms var(--ease-smooth);
+  z-index: 0;
+}
+
 .nav-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -695,16 +752,13 @@ $container-max-widths: (
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: background-color 200ms var(--ease-smooth), color 200ms var(--ease-smooth);
-}
-
-.nav-item:hover {
-  background: rgba(127, 127, 127, 0.18);
+  transition: color 200ms var(--ease-smooth);
 }
 
 .nav-item.active {
   background: var(--p-primary-color);
   color: var(--p-primary-contrast-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .nav-icon {
@@ -724,6 +778,71 @@ $container-max-widths: (
   transform: translateX(0);
   transition-delay: 90ms;
 }
+
+// ===== 顶栏玻璃胶囊（同 nav-capsule 动画模式，水平排列）=====
+.bar-capsule {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 0.35rem;
+  border-radius: var(--glass-radius);
+  overflow: hidden;
+  transition: width 420ms var(--ease-smooth);
+  white-space: nowrap;
+  contain: layout style paint;
+}
+
+.bar-indicator {
+  position: absolute;
+  top: 0.35rem;
+  left: 0;
+  height: calc(100% - 0.7rem);
+  border-radius: 9999px;
+  background: rgba(127, 127, 127, 0.18);
+  pointer-events: none;
+  transition: left 200ms var(--ease-smooth), width 200ms var(--ease-smooth), opacity 180ms var(--ease-smooth);
+  z-index: 0;
+}
+
+.bar-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0.45rem 0.4rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  flex-shrink: 0;
+}
+
+.bar-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.bar-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-0.4rem);
+  white-space: nowrap;
+  transition: opacity 220ms var(--ease-smooth), transform 320ms var(--ease-smooth), max-width 340ms var(--ease-smooth);
+}
+
+.bar-capsule:hover .bar-label {
+  max-width: 15rem;
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: 90ms;
+}
+
+.bar-group { width: 9rem; }
+.bar-group:hover { width: 26rem; }
 
 // 右栏：板块内容玻璃卡片（材质由 .glass 类提供）
 .controller-panel {
